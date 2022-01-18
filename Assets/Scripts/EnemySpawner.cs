@@ -9,7 +9,18 @@ public class EnemySpawner : MonoBehaviour
     [SerializeField] private GameObject _enemy;
     void Start()
     {
-        
+        CreateEnemy();
+    }
+    private void CreateEnemy()
+    {
+        if (Random.value > 0.5f)
+        {
+            Instantiate(_enemy, Vector3.right * 10, Quaternion.identity);
+        }
+        else
+        {
+            Instantiate(_enemy, Vector3.right * -10, Quaternion.identity);
+        }
     }
 
     void Update()
@@ -20,15 +31,8 @@ public class EnemySpawner : MonoBehaviour
         {
             _elapsedTime = 0f;
 
-            if (Random.value > 0.5f)
-            {
-                Instantiate(_enemy, Vector3.right * 10, Quaternion.identity);
-            }
-            else
-            {
-                Instantiate(_enemy, Vector3.right * -10, Quaternion.identity);
-            }
-                    }
+            CreateEnemy();
+        }
 
     }
 }
