@@ -5,16 +5,24 @@ using UnityEngine;
 public class EnemyController : MonoBehaviour
 {
     private GameObject _player;
-    private bool _left;
+    private bool _left,_dead;
     private bool _walking = true;
-    private Rigidbody2D _rb2D;
+    private Rigidbody2D _rigidbody;
+    private PlayerController _playerController;
 
+    private int _hp;
+    [SerializeField]private List<bool> _hpSides;
+    [SerializeField]private List<SpriteRenderer> _hpBars;
+
+    
     void Start()
     {
-        _rb2D = GetComponent<Rigidbody2D>();
-        _player = FindObjectOfType<PlayerController>().gameObject;
+        _playerController = FindObjectOfType<PlayerController>();
+        _player = _playerController.gameObject;
 
-        if(transform.position.x < 0)
+        _rigidbody = GetComponent<Rigidbody2D>();
+        
+        if((_player.transform.position - transform.position).x > 0)
         {
             _left = true;
         }
@@ -23,21 +31,99 @@ public class EnemyController : MonoBehaviour
             _left = false;
             GetComponent<SpriteRenderer>().flipX = true;
         }
+        _hp = Random.Range(1, 3);
+        _hpSides = new List<bool>();
+        //Añadimos el primer elemnto "manualmente
+        _hpSides.Add(!_left);
+
+        //Para reactivar solo las que usemos luego en el bucle for
+        //desactivamos todo slos sprites renderer de las barras de vida de los enemigos
+        foreach (SpriteRenderer s in _hpBars)
+        {
+            s.enabled = false;
+        }
+
+        if (_hpSides[0])
+        {
+            _hpBars[0].color = Color.blue;
+        }
+        else
+        {
+            _hpBars[0].color = Color.red;
+
+        }
+
+
+        for (int i = 1; i < _hp; i++)
+        {
+            _hpBars[i].enabled = true;
+
+            if (Random.value<0.5f)
+            {
+                _hpSides.Add(false);
+                _hpBars[i].color = Color.blue;
+            }
+            else
+            {
+                _hpSides.Add(true);
+                _hpBars[i].color = Color.red;
+            }
+        }
+    }
+    public void GetHit(bool right)
+    {
+
+        _walking = false;
+        _hp--;
+        _hpSides.RemoveAt(0);
+
+        if (_hp<=0)
+        {
+            Die(right);
+        }
+        else
+        {
+            if (_hpSides[0])
+            {
+                transform.position = _player.transform.position + 1.5f * Vector3.right;
+                GetComponent<SpriteRenderer>().flipX = true;
+            }
+            else
+            {
+                transform.position = _player.transform.position - 1.5f * Vector3.right;
+                GetComponent<SpriteRenderer>().flipX = false;
+            }
+            _hpBars[0].enabled = false;
+            for (int i = 0; i < _hpBars.Count; i++)
+            {
+                _hpBars[i].transform.localPosition -= Vector3.up * 0.4f;
+            }
+        }
     }
 
     public void Die(bool right)
     {
+        _dead = true;
 
-        _rb2D.gravityScale = 10f;
+        GameManager.points++;//sumamos puntos
+
+        GetComponent<BoxCollider2D>().enabled = false;
+        _rigidbody.gravityScale = 8f;
         if (right)
         {
-            _rb2D.velocity = new Vector3(1, 2f, 0) * 15f;
-            _rb2D.AddTorque(-900f);
+            _rigidbody.velocity = new Vector3(1, 2f, 0).normalized * 30;
+            _rigidbody.AddTorque(-900);
+            
         }
         else
         {
-            _rb2D.velocity = new Vector3(-1, 2f,0) * 15f;
-            _rb2D.AddTorque(900f);
+            _rigidbody.velocity = new Vector3(-1, 2f, 0).normalized * 30;
+            _rigidbody.AddTorque(900);
+        }
+
+        foreach (SpriteRenderer a in _hpBars)
+        {
+            a.enabled = false;
         }
 
     }
@@ -51,22 +137,29 @@ public class EnemyController : MonoBehaviour
             {
                 direction = Vector3.right;
             }
-
             transform.Translate(direction * Time.deltaTime * 2f);
             float distance = Vector3.Distance(transform.position, _player.transform.position);
-
-            if (distance < 1.5f)
+            if(distance < 1.5f)
             {
                 _walking = false;
+                StartCoroutine(HitPlayer(0.5f));
             }
-
-        }
-
-        else
+        }                   
+        if (transform.position.y < -10) 
         {
-
+            Destroy(gameObject);
         }
        
 
+    }
+    IEnumerator HitPlayer(float waitTime)
+    {
+        yield return new WaitForSeconds(waitTime);
+        if (!_dead)
+        {
+            _playerController.HP--;
+        }
+
+        StartCoroutine(HitPlayer(1f));
     }
 }
